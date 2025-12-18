@@ -8,10 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.yourname.taskmanager.ui.screens.*
-import com.yourname.taskmanager.ui.viewmodel.AlarmViewModel
-import com.yourname.taskmanager.ui.viewmodel.CalendarViewModel
-import com.yourname.taskmanager.ui.viewmodel.ReminderViewModel
-import com.yourname.taskmanager.ui.viewmodel.TaskViewModel
+import com.yourname.taskmanager.ui.viewmodel.*
 
 @Composable
 fun NavGraph(
@@ -20,6 +17,7 @@ fun NavGraph(
     alarmViewModel: AlarmViewModel = viewModel(),
     reminderViewModel: ReminderViewModel = viewModel(),
     calendarViewModel: CalendarViewModel = viewModel(),
+    settingsViewModel: SettingsViewModel = viewModel(),
     onExportDatabase: () -> Unit,
     onImportDatabase: () -> Unit
 ) {
@@ -80,7 +78,11 @@ fun NavGraph(
         }
 
         composable(Screen.Settings.route) {
-            SettingsScreen(onNavigateBack = { navController.popBackStack() })
+            SettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onExportData = onExportDatabase,
+                settingsViewModel = settingsViewModel
+            )
         }
 
         composable(Screen.Statistics.route) {

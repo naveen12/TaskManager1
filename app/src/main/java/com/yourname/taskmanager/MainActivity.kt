@@ -27,10 +27,7 @@ import com.yourname.taskmanager.alarm.AlarmScheduler
 import com.yourname.taskmanager.ui.navigation.BottomNavigationBar
 import com.yourname.taskmanager.ui.navigation.NavGraph
 import com.yourname.taskmanager.ui.theme.TaskManagerTheme
-import com.yourname.taskmanager.ui.viewmodel.AlarmViewModel
-import com.yourname.taskmanager.ui.viewmodel.CalendarViewModel
-import com.yourname.taskmanager.ui.viewmodel.ReminderViewModel
-import com.yourname.taskmanager.ui.viewmodel.TaskViewModel
+import com.yourname.taskmanager.ui.viewmodel.*
 import com.yourname.taskmanager.utils.DatabaseHelper
 import com.yourname.taskmanager.utils.SettingsManager
 
@@ -50,19 +47,22 @@ class MainActivity : ComponentActivity() {
         requestNeededPermissions()
 
         setContent {
-            TaskManagerTheme {
+            val settingsViewModel: SettingsViewModel = viewModel()
+            val isDarkTheme by settingsViewModel.isDarkTheme.collectAsState()
+
+            TaskManagerTheme(darkTheme = isDarkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    TaskManagerApp()
+                    TaskManagerApp(settingsViewModel)
                 }
             }
         }
     }
 
     @Composable
-    fun TaskManagerApp() {
+    fun TaskManagerApp(settingsViewModel: SettingsViewModel) {
         val navController = rememberNavController()
         val taskViewModel: TaskViewModel = viewModel()
         val alarmViewModel: AlarmViewModel = viewModel()
@@ -85,6 +85,7 @@ class MainActivity : ComponentActivity() {
                     alarmViewModel = alarmViewModel,
                     reminderViewModel = reminderViewModel,
                     calendarViewModel = calendarViewModel,
+                    settingsViewModel = settingsViewModel,
                     onExportDatabase = { exportDatabase() },
                     onImportDatabase = { importLauncher.launch("*/*") }
                 )

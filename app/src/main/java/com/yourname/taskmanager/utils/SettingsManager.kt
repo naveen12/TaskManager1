@@ -4,13 +4,22 @@ import android.content.Context
 import android.content.SharedPreferences
 
 class SettingsManager(context: Context) {
-    private val prefs: SharedPreferences = context.getSharedPreferences("prefs", Context.MODE_PRIVATE)
 
-    fun isFingerprintLockEnabled(): Boolean {
-        return prefs.getBoolean("fingerprint_lock", true)
+    private val prefs: SharedPreferences = context.getSharedPreferences("TaskManagerPrefs", Context.MODE_PRIVATE)
+
+    fun setFingerprintLockEnabled(isEnabled: Boolean) {
+        prefs.edit().putBoolean("fingerprint_lock_enabled", isEnabled).apply()
     }
 
-    fun setFingerprintLockEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean("fingerprint_lock", enabled).apply()
+    fun isFingerprintLockEnabled(): Boolean {
+        return prefs.getBoolean("fingerprint_lock_enabled", false)
+    }
+
+    fun setDarkTheme(isDark: Boolean) {
+        prefs.edit().putBoolean("dark_theme", isDark).apply()
+    }
+
+    fun isDarkTheme(): Boolean {
+        return prefs.getBoolean("dark_theme", false)
     }
 }
