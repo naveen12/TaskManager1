@@ -23,18 +23,19 @@ import com.yourname.taskmanager.data.Alarm
 import com.yourname.taskmanager.ui.viewmodel.AlarmViewModel
 import com.yourname.taskmanager.utils.toTimeString
 import java.util.Calendar
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditAlarmScreen(
     alarmViewModel: AlarmViewModel = viewModel(),
     onNavigateBack: () -> Unit,
-    alarm: Alarm? = null
+    alarm: Alarm
 ) {
-    var alarmName by remember { mutableStateOf(alarm?.name ?: "") }
-    var ringtoneUri by remember { mutableStateOf(alarm?.ringtone?.takeIf { it.isNotBlank() && it != "null" }?.let { Uri.parse(it) }) }
-    var vibrate by remember { mutableStateOf(alarm?.vibrate ?: true) }
-    var time by remember { mutableStateOf(alarm?.time ?: System.currentTimeMillis()) }
+    var alarmName by remember { mutableStateOf(alarm.name ?: "") }
+    var ringtoneUri by remember { mutableStateOf(alarm.ringtone?.takeIf { it.isNotBlank() && it != "null" }?.let { Uri.parse(it) }) }
+    var vibrate by remember { mutableStateOf(alarm.vibrate) }
+    var time by remember { mutableStateOf(alarm.time) }
 
     val context = LocalContext.current
     val ringtonePickerLauncher = rememberLauncherForActivityResult(
@@ -54,21 +55,22 @@ fun AddEditAlarmScreen(
         context,
         { _, hour, minute ->
             val calendar = Calendar.getInstance()
+            calendar.time = Date(time)
             calendar.set(Calendar.HOUR_OF_DAY, hour)
             calendar.set(Calendar.MINUTE, minute)
             time = calendar.timeInMillis
         },
-        Calendar.getInstance().get(Calendar.HOUR_OF_DAY),
-        Calendar.getInstance().get(Calendar.MINUTE),
+        Calendar.getInstance().apply { this.time = Date(time) }.get(Calendar.HOUR_OF_DAY),
+        Calendar.getInstance().apply { this.time = Date(time) }.get(Calendar.MINUTE),
         false
     )
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (alarm == null) "Add Alarm" else "Edit Alarm") },
+                title = { Text(if (alarm.id == 0L) "Add Alarm" else "Edit Alarm") },
                 actions = {
-                    if (alarm != null) {
+                    if (alarm.id != 0L) {
                         IconButton(onClick = {
                             alarmViewModel.deleteAlarm(alarm)
                             onNavigateBack()
@@ -83,12 +85,7 @@ fun AddEditAlarmScreen(
             FloatingActionButton(
                 onClick = {
                     val finalRingtoneUri = ringtoneUri ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                    val newAlarm = alarm?.copy(
-                        name = alarmName,
-                        time = time,
-                        ringtone = finalRingtoneUri?.toString(),
-                        vibrate = vibrate
-                    ) ?: Alarm(
+                    val newAlarm = alarm.copy(
                         name = alarmName,
                         time = time,
                         ringtone = finalRingtoneUri?.toString(),

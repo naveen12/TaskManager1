@@ -44,10 +44,10 @@ fun TaskListScreen(
     onNavigateToSettings: () -> Unit,
     onExportDatabase: () -> Unit
 ) {
-    val tasks by taskViewModel.activeTasks.collectAsState()
-    val completedTasks by taskViewModel.completedTasks.collectAsState()
-    val alarms by alarmViewModel.allAlarms.collectAsState()
-    val reminders by reminderViewModel.allReminders.collectAsState()
+    val tasks by taskViewModel.activeTasks.collectAsState(initial = emptyList())
+    val completedTasks by taskViewModel.completedTasks.collectAsState(initial = emptyList())
+    val alarms by alarmViewModel.allAlarms.collectAsState(initial = emptyList())
+    val reminders by reminderViewModel.allReminders.collectAsState(initial = emptyList())
     val selectedDate by calendarViewModel.selectedDate.collectAsState()
 
     var showMenu by remember { mutableStateOf(false) }
@@ -137,7 +137,7 @@ fun TaskListScreen(
                 item { 
                     Text("Tasks", style = MaterialTheme.typography.headlineMedium)
                 }
-                items((tasks + completedTasks).filter { it.dueDate?.toLocalDate() == selectedDate }) { task ->
+                items((tasks + completedTasks).filter { it.dueDate.toLocalDate() == selectedDate }) { task ->
                     TaskItem(
                         task = task,
                         onTaskClick = { onNavigateToEditTask(task.id) },
@@ -325,9 +325,9 @@ fun TaskItem(
                 )
 
                 // Description/Notes
-                if (task.description.isNotEmpty()) {
+                if (task.notes.isNotEmpty()) {
                     Text(
-                        text = task.description,
+                        text = task.notes,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -341,42 +341,23 @@ fun TaskItem(
                     modifier = Modifier.padding(top = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    task.dueDate?.let { dueDate ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.CalendarToday,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp),
-                                tint = if (dueDate.isOverdue() && !task.isCompleted)
-                                    MaterialTheme.colorScheme.error
-                                else MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = dueDate.toRelativeDateString(),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (dueDate.isOverdue() && !task.isCompleted)
-                                    MaterialTheme.colorScheme.error
-                                else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    task.reminderTime?.let {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.Alarm,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = it.toTimeString(),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.CalendarToday,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = if (task.dueDate.isOverdue() && !task.isCompleted)
+                                MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = task.dueDate.toRelativeDateString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (task.dueDate.isOverdue() && !task.isCompleted)
+                                MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }

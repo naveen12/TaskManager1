@@ -9,8 +9,11 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.* 
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -21,39 +24,37 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.yourname.taskmanager.alarm.AlarmScheduler
 import com.yourname.taskmanager.data.Priority
 import com.yourname.taskmanager.data.Task
 import com.yourname.taskmanager.ui.viewmodel.TaskViewModel
 import com.yourname.taskmanager.utils.toColor
 import com.yourname.taskmanager.utils.toDateString
 import com.yourname.taskmanager.utils.toDisplayString
-import com.yourname.taskmanager.utils.toTimeString
 import kotlinx.coroutines.launch
-import java.util. *
+import java.util.Calendar
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditTaskScreen(
     viewModel: TaskViewModel,
-    taskId: Long?,
+    task: Task,
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val alarmScheduler = remember { AlarmScheduler(context) }
     val scope = rememberCoroutineScope()
 
-    var task by remember { mutableStateOf<Task?>(null) }
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var notes by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("General") }
-    var priority by remember { mutableStateOf(Priority.LOW) }
-    var dueDate by remember { mutableStateOf<Long?>(null) }
-    var reminderTime by remember { mutableStateOf<Long?>(null) }
-    var ringtoneUri by remember { mutableStateOf<Uri?>(null) }
+    var title by remember { mutableStateOf(task.title) }
+    var notes by remember { mutableStateOf(task.notes) }
+    var dueDate by remember { mutableStateOf(task.dueDate) }
+    var duration by remember { mutableStateOf(task.duration) }
+    var repeat by remember { mutableStateOf(task.repeat) }
+    var priority by remember { mutableStateOf(task.priority) }
+    var backgroundColor by remember { mutableStateOf(task.backgroundColor) }
+    var ringtoneUri by remember { mutableStateOf(task.ringtone?.takeIf { it.isNotBlank() && it != "null" }?.let { Uri.parse(it) }) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     val ringtonePickerLauncher = rememberLauncherForActivityResult(
@@ -69,40 +70,73 @@ fun AddEditTaskScreen(
         }
     )
 
-    // Load existing task
-    LaunchedEffect(taskId) {
-        if (taskId != null && taskId != 0L) {
-            viewModel.getTaskById(taskId)?.let { existingTask ->
-                task = existingTask
-                title = existingTask.title
-                description = existingTask.description
-                notes = existingTask.notes
-                category = existingTask.category
-                priority = existingTask.priority
-                dueDate = existingTask.dueDate
-                reminderTime = existingTask.reminderTime
-                ringtoneUri = existingTask.ringtone?.takeIf { it.isNotBlank() && it != "null" }?.let { Uri.parse(it) }
-            }
-        }
-    }
+    val datePickerDialog = DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            val calendar = Calendar.getInstance()
+            calendar.timeInMillis = dueDate
+            calendar.set(year, month, dayOfMonth)
+            dueDate = calendar.timeInMillis
+        },
+        Calendar.getInstance().apply { timeInMillis = dueDate }.get(Calendar.YEAR),
+        Calendar.getInstance().apply { timeInMillis = dueDate }.get(Calendar.MONTH),
+        Calendar.getInstance().apply { timeInMillis = dueDate }.get(Calendar.DAY_OF_MONTH)
+    )
+
+    val durationPickerDialog = TimePickerDialog(
+        context,
+        { _, hour, minute ->
+            duration = (hour * 60 * 60 * 1000 + minute * 60 * 1000).toLong()
+        },
+        (duration / (60 * 60 * 1000)).toInt(),
+        (duration % (60 * 60 * 1000) / (60 * 1000)).toInt(),
+        true
+    )
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (taskId == null || taskId == 0L) "New Task" else "Edit Task") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, "Back")
-                    }
-                },
+                title = { Text(if (task.id == 0L) "New Task" else "Edit Task") },
+                navigationIcon = { IconButton(onClick = onNavigateBack) { Icon(Icons.Default.ArrowBack, "Back") } },
                 actions = {
-                    if (taskId != null && taskId != 0L) {
+                    if (task.id != 0L) {
                         IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(Icons.Default.Delete, "Delete Task")
                         }
                     }
                 }
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    if (title.isNotBlank()) {
+                        scope.launch {
+                            val finalRingtoneUri = ringtoneUri ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                            val newTask = task.copy(
+                                title = title,
+                                notes = notes,
+                                dueDate = dueDate,
+                                duration = duration,
+                                repeat = repeat,
+                                priority = priority,
+                                backgroundColor = backgroundColor,
+                                ringtone = finalRingtoneUri?.toString()
+                            )
+
+                            if (task.id == 0L) {
+                                viewModel.insertTask(newTask)
+                            } else {
+                                viewModel.updateTask(newTask)
+                            }
+
+                            onNavigateBack()
+                        }
+                    }
+                }
+            ) {
+                Icon(Icons.Default.Save, null)
+            }
         }
     ) { padding ->
         Column(
@@ -113,49 +147,35 @@ fun AddEditTaskScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Title
             OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text("Title *") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                leadingIcon = { Icon(Icons.Default.Title, null) }
+                value = title, onValueChange = { title = it }, label = { Text("Task Name") }, modifier = Modifier.fillMaxWidth()
             )
-
-            // Description
             OutlinedTextField(
-                value = description,
-                onValueChange = { description = it },
-                label = { Text("Description") },
-                modifier = Modifier.fillMaxWidth(),
-                maxLines = 3,
-                leadingIcon = { Icon(Icons.Default.Description, null) }
+                value = notes, onValueChange = { if (it.length <= 300) notes = it }, label = { Text("Notes") },
+                modifier = Modifier.fillMaxWidth(), maxLines = 5, supportingText = { Text("${notes.length} / 300") }
             )
+            OutlinedButton(onClick = { datePickerDialog.show() }) {
+                Text(text = dueDate.toDateString())
+            }
+            OutlinedButton(onClick = { durationPickerDialog.show() }) {
+                Text(text = "${duration / (60 * 60 * 1000)}h ${duration % (60 * 60 * 1000) / (60 * 1000)}m")
+            }
 
-            // Notes
-            OutlinedTextField(
-                value = notes,
-                onValueChange = { notes = it },
-                label = { Text("Notes") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
-                maxLines = 6,
-                leadingIcon = { Icon(Icons.Default.Notes, null) }
-            )
+            var repeatExpanded by remember { mutableStateOf(false) }
+            val repeatOptions = listOf("Does not repeat", "Every day", "Every week", "Every month", "Every year", "Custom")
+            ExposedDropdownMenuBox(expanded = repeatExpanded, onExpandedChange = { repeatExpanded = !repeatExpanded }) {
+                OutlinedTextField(
+                    value = repeat, onValueChange = {}, readOnly = true, label = { Text("Repeat") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = repeatExpanded) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(expanded = repeatExpanded, onDismissRequest = { repeatExpanded = false }) {
+                    repeatOptions.forEach { option ->
+                        DropdownMenuItem(text = { Text(option) }, onClick = { repeat = option; repeatExpanded = false })
+                    }
+                }
+            }
 
-            // Category
-            OutlinedTextField(
-                value = category,
-                onValueChange = { category = it },
-                label = { Text("Category") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                leadingIcon = { Icon(Icons.Default.Category, null) }
-            )
-
-            // Priority Selection
             Text("Priority", style = MaterialTheme.typography.titleSmall)
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -166,192 +186,27 @@ fun AddEditTaskScreen(
                         selected = priority == p,
                         onClick = { priority = p },
                         label = { Text(p.toDisplayString()) },
-                        leadingIcon = {
-                            Box(
-                                modifier = Modifier
-                                    .size(12.dp)
-                                    .clip(CircleShape)
-                                    .background(p.toColor())
-                            )
-                        }
+                        leadingIcon = { Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(p.toColor())) }
                     )
                 }
             }
 
-            // Due Date
-            OutlinedCard(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = {
-                    val calendar = Calendar.getInstance()
-                    dueDate?.let { calendar.timeInMillis = it }
-
-                    DatePickerDialog(
-                        context,
-                        { _, year, month, day ->
-                            calendar.set(year, month, day)
-                            dueDate = calendar.timeInMillis
-                        },
-                        calendar.get(Calendar.YEAR),
-                        calendar.get(Calendar.MONTH),
-                        calendar.get(Calendar.DAY_OF_MONTH)
-                    ).show()
-                }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text("Due Date", style = MaterialTheme.typography.labelMedium)
-                        Text(
-                            text = dueDate?.toDateString() ?: "Not set",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                    if (dueDate != null) {
-                        IconButton(onClick = { dueDate = null }) {
-                            Icon(Icons.Default.Clear, "Clear")
-                        }
-                    } else {
-                        Icon(Icons.Default.CalendarToday, null)
-                    }
+            val colors = listOf("#FFFFFF", "#FFCDD2", "#F8BBD0", "#E1BEE7", "#D1C4E9", "#C5CAE9", "#BBDEFB", "#B3E5FC", "#B2EBF2", "#B2DFDB", "#C8E6C9", "#DCEDC8", "#F0F4C3", "#FFF9C4", "#FFECB3", "#FFE0B2", "#FFCCBC")
+            Text("Background Color", style = MaterialTheme.typography.bodyLarge)
+            LazyRow {
+                items(colors) { color ->
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp).padding(4.dp).clip(CircleShape)
+                            .background(Color(android.graphics.Color.parseColor(color)))
+                            .clickable { backgroundColor = color }
+                            .border(width = 2.dp, color = if (backgroundColor == color) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface, shape = CircleShape)
+                    )
                 }
             }
-
-            // Reminder Time
-            OutlinedCard(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = {
-                    val calendar = Calendar.getInstance()
-                    reminderTime?.let { calendar.timeInMillis = it }
-
-                    TimePickerDialog(
-                        context,
-                        { _, hour, minute ->
-                            calendar.set(Calendar.HOUR_OF_DAY, hour)
-                            calendar.set(Calendar.MINUTE, minute)
-                            reminderTime = calendar.timeInMillis
-                        },
-                        calendar.get(Calendar.HOUR_OF_DAY),
-                        calendar.get(Calendar.MINUTE),
-                        false
-                    ).show()
-                }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text("Reminder", style = MaterialTheme.typography.labelMedium)
-                        Text(
-                            text = reminderTime?.toTimeString() ?: "Not set",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                    if (reminderTime != null) {
-                        IconButton(onClick = { reminderTime = null }) {
-                            Icon(Icons.Default.Clear, "Clear")
-                        }
-                    } else {
-                        Icon(Icons.Default.Alarm, null)
-                    }
-                }
-            }
-
-            // Ringtone
-            OutlinedCard(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = {
-                    val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER)
-                    intent.putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_RINGTONE)
-                    intent.putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
-                    intent.putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
-                    intent.putExtra(RingtoneManager.EXTRA_RINGTONE_DEFAULT_URI, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE))
-                    ringtonePickerLauncher.launch(intent)
-                }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text("Ringtone", style = MaterialTheme.typography.labelMedium)
-                        Text(
-                            text = ringtoneUri?.let { uri ->
-                                RingtoneManager.getRingtone(context, uri)?.getTitle(context)
-                            } ?: "Default",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                    Icon(Icons.Default.MusicNote, null)
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // Save Button
-            Button(
-                onClick = {
-                    if (title.isNotBlank()) {
-                        scope.launch {
-                            val finalRingtoneUri = ringtoneUri ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-                            val newTask = task?.copy(
-                                title = title,
-                                description = description,
-                                notes = notes,
-                                category = category,
-                                priority = priority,
-                                dueDate = dueDate,
-                                reminderTime = reminderTime,
-                                ringtone = finalRingtoneUri?.toString()
-                            ) ?: Task(
-                                title = title,
-                                description = description,
-                                notes = notes,
-                                category = category,
-                                priority = priority,
-                                dueDate = dueDate,
-                                reminderTime = reminderTime,
-                                ringtone = finalRingtoneUri?.toString()
-                            )
-
-                            // Insert or update task
-                            if (taskId == null || taskId == 0L) {
-                                val newTaskId = viewModel.insertTask(newTask)
-                                reminderTime?.let {
-                                    alarmScheduler.schedule(newTask.copy(id = newTaskId))
-                                }
-                            } else {
-                                viewModel.updateTask(newTask)
-                                reminderTime?.let {
-                                    alarmScheduler.schedule(newTask)
-                                } ?: alarmScheduler.cancelTask(taskId)
-                            }
-
-                            onNavigateBack()
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = title.isNotBlank()
-            ) {
-                Icon(Icons.Default.Save, null)
-                Spacer(Modifier.width(8.dp))
-                Text("Save Task")
-            }
-
         }
     }
 
-    // Delete Confirmation Dialog
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -360,22 +215,13 @@ fun AddEditTaskScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        task?.let { taskToDelete ->
-                            viewModel.deleteTask(taskToDelete)
-                            alarmScheduler.cancelTask(taskToDelete.id)
-                        }
+                        viewModel.deleteTask(task)
                         showDeleteDialog = false
                         onNavigateBack()
                     }
-                ) {
-                    Text("Delete")
-                }
+                ) { Text("Delete") }
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
-                }
-            }
+            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } }
         )
     }
 }

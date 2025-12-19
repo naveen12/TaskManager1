@@ -13,19 +13,19 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.yourname.taskmanager.ui.viewmodel.AlarmViewModel
+import com.yourname.taskmanager.ui.viewmodel.ReminderViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AlarmListScreen(
-    alarmViewModel: AlarmViewModel = viewModel(),
-    onNavigateToEditAlarm: (Long) -> Unit
+fun ReminderListScreen(
+    reminderViewModel: ReminderViewModel = viewModel(),
+    onNavigateToEditReminder: (Long) -> Unit
 ) {
-    val alarms by alarmViewModel.allAlarms.collectAsState(initial = emptyList())
+    val reminders by reminderViewModel.allReminders.collectAsState(initial = emptyList())
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Alarms") })
+            TopAppBar(title = { Text("Reminders") })
         }
     ) { padding ->
         LazyColumn(
@@ -33,11 +33,10 @@ fun AlarmListScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            items(alarms) { alarm ->
-                AlarmItem(
-                    alarm = alarm,
-                    onAlarmEnabledChange = { isEnabled -> alarmViewModel.updateAlarm(alarm.copy(isEnabled = isEnabled)) },
-                    onAlarmClick = { onNavigateToEditAlarm(alarm.id) }
+            items(reminders) { reminder ->
+                ReminderItem(
+                    reminder = reminder,
+                    onReminderClick = { onNavigateToEditReminder(reminder.id) }
                 )
             }
         }

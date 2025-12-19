@@ -1,86 +1,116 @@
 package com.yourname.taskmanager.alarm
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.content.Context
-import androidx.work.Data
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
+import android.content.Intent
 import com.yourname.taskmanager.data.Alarm
 import com.yourname.taskmanager.data.Reminder
 import com.yourname.taskmanager.data.Task
-import com.yourname.taskmanager.worker.AlarmWorker
-import com.yourname.taskmanager.worker.ReminderWorker
-import com.yourname.taskmanager.worker.TaskReminderWorker
-import java.util.concurrent.TimeUnit
 
 class AlarmScheduler(private val context: Context) {
 
+    private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
     fun schedule(task: Task) {
-        val reminderTime = task.reminderTime ?: return
-        if (reminderTime < System.currentTimeMillis()) return
+        val intent = Intent(context, AlarmReceiver::class.java).apply {
+            putExtra("EXTRA_ID", task.id)
+            putExtra("EXTRA_TITLE", task.title)
+            putExtra("EXTRA_TYPE", "TASK")
+        }
 
-        val data = Data.Builder()
-            .putLong("EXTRA_ID", task.id)
-            .putString("EXTRA_TITLE", task.title)
-            .putString("EXTRA_DESCRIPTION", task.description)
-            .build()
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            task.id.toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
-        val delay = reminderTime - System.currentTimeMillis()
-        val workRequest = OneTimeWorkRequestBuilder<TaskReminderWorker>()
-            .setInitialDelay(delay, TimeUnit.MILLISECONDS)
-            .setInputData(data)
-            .addTag(task.id.toString())
-            .build()
-
-        WorkManager.getInstance(context).enqueue(workRequest)
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            task.dueDate,
+            pendingIntent
+        )
     }
 
     fun schedule(alarm: Alarm) {
         if (alarm.time < System.currentTimeMillis()) return
 
-        val data = Data.Builder()
-            .putLong("EXTRA_ID", alarm.id)
-            .putString("EXTRA_TITLE", "Alarm")
-            .putString("EXTRA_DESCRIPTION", "It's time!")
-            .build()
+        val intent = Intent(context, AlarmReceiver::class.java).apply {
+            putExtra("EXTRA_ID", alarm.id)
+            putExtra("EXTRA_TITLE", alarm.name ?: "Alarm")
+            putExtra("EXTRA_DESCRIPTION", "It's time!")
+            putExtra("EXTRA_TYPE", "ALARM")
+        }
 
-        val delay = alarm.time - System.currentTimeMillis()
-        val workRequest = OneTimeWorkRequestBuilder<AlarmWorker>()
-            .setInitialDelay(delay, TimeUnit.MILLISECONDS)
-            .setInputData(data)
-            .addTag(alarm.id.toString())
-            .build()
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            alarm.id.toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
-        WorkManager.getInstance(context).enqueue(workRequest)
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            alarm.time,
+            pendingIntent
+        )
     }
 
     fun schedule(reminder: Reminder) {
         if (reminder.time < System.currentTimeMillis()) return
 
-        val data = Data.Builder()
-            .putLong("EXTRA_ID", reminder.id)
-            .putString("EXTRA_TITLE", reminder.title)
-            .putString("EXTRA_DESCRIPTION", "Reminder: ${reminder.title}")
-            .build()
+        val intent = Intent(context, AlarmReceiver::class.java).apply {
+            putExtra("EXTRA_ID", reminder.id)
+            putExtra("EXTRA_TITLE", reminder.title)
+            putExtra("EXTRA_DESCRIPTION", "Reminder: ${reminder.title}")
+            putExtra("EXTRA_TYPE", "REMINDER")
+        }
 
-        val delay = reminder.time - System.currentTimeMillis()
-        val workRequest = OneTimeWorkRequestBuilder<ReminderWorker>()
-            .setInitialDelay(delay, TimeUnit.MILLISECONDS)
-            .setInputData(data)
-            .addTag(reminder.id.toString())
-            .build()
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            reminder.id.toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
-        WorkManager.getInstance(context).enqueue(workRequest)
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            reminder.time,
+            pendingIntent
+        )
     }
 
     fun cancelTask(taskId: Long) {
-        WorkManager.getInstance(context).cancelAllWorkByTag(taskId.toString())
+        val intent = Intent(context, AlarmReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            taskId.toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(pendingIntent)
     }
 
     fun cancelAlarm(alarmId: Long) {
-        WorkManager.getInstance(context).cancelAllWorkByTag(alarmId.toString())
+        val intent = Intent(context, AlarmReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            alarmId.toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(pendingIntent)
     }
 
     fun cancelReminder(reminderId: Long) {
-        WorkManager.getInstance(context).cancelAllWorkByTag(reminderId.toString())
+        val intent = Intent(context, AlarmReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            reminderId.toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(pendingIntent)
     }
 }

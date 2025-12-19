@@ -18,6 +18,8 @@ class ReminderViewModel(application: Application) : AndroidViewModel(application
         emptyList()
     )
 
+    fun getReminderById(id: Long) = reminderRepository.getReminderById(id)
+
     fun insertReminder(reminder: Reminder) {
         viewModelScope.launch {
             reminderRepository.insertReminder(reminder)

@@ -18,9 +18,17 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
         emptyList()
     )
 
+    fun getAlarmById(id: Long) = alarmRepository.getAlarmById(id)
+
     fun insertAlarm(alarm: Alarm) {
         viewModelScope.launch {
             alarmRepository.insertAlarm(alarm)
+        }
+    }
+
+    fun updateAlarm(alarm: Alarm) {
+        viewModelScope.launch {
+            alarmRepository.updateAlarm(alarm)
         }
     }
 

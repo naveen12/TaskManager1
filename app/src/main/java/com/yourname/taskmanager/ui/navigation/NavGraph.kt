@@ -1,6 +1,8 @@
 package com.yourname.taskmanager.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -34,6 +36,12 @@ fun NavGraph(
                 onNavigateToEditTask = { taskId ->
                     navController.navigate(Screen.EditTask.createRoute(taskId))
                 },
+                onNavigateToEditAlarm = { alarmId ->
+                    navController.navigate(Screen.EditAlarm.createRoute(alarmId))
+                },
+                onNavigateToEditReminder = { reminderId ->
+                    navController.navigate(Screen.EditReminder.createRoute(reminderId))
+                },
                 onNavigateToAddItem = { route -> navController.navigate(route) },
                 onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
             )
@@ -47,15 +55,24 @@ fun NavGraph(
             )
         }
         composable(BottomNavItem.Alarm.route) {
-            AlarmListScreen(alarmViewModel = alarmViewModel)
+            AlarmListScreen(
+                alarmViewModel = alarmViewModel,
+                onNavigateToEditAlarm = { alarmId ->
+                    navController.navigate(Screen.EditAlarm.createRoute(alarmId))
+                }
+            )
         }
         composable(BottomNavItem.Reminder.route) {
-            ReminderListScreen(reminderViewModel = reminderViewModel)
+            ReminderListScreen(
+                reminderViewModel = reminderViewModel,
+                onNavigateToEditReminder = { reminderId ->
+                    navController.navigate(Screen.EditReminder.createRoute(reminderId))
+                }
+            )
         }
 
         composable(Screen.AddTask.route) {
-            AddEditTaskScreen(
-                viewModel = taskViewModel,
+            AddEditTaskLoader(
                 taskId = null,
                 onNavigateBack = { navController.popBackStack() }
             )
@@ -65,10 +82,39 @@ fun NavGraph(
             route = Screen.EditTask.route,
             arguments = listOf(navArgument("taskId") { type = NavType.LongType })
         ) { backStackEntry ->
-            val taskId = backStackEntry.arguments?.getLong("taskId") ?: return@composable
-            AddEditTaskScreen(
-                viewModel = taskViewModel,
+            val taskId = backStackEntry.arguments?.getLong("taskId")
+            AddEditTaskLoader(
                 taskId = taskId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.AddAlarm.route) {
+            AddEditAlarmLoader(alarmId = null, onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(
+            route = Screen.EditAlarm.route,
+            arguments = listOf(navArgument("alarmId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val alarmId = backStackEntry.arguments?.getLong("alarmId")
+            AddEditAlarmLoader(
+                alarmId = alarmId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.AddReminder.route) {
+            AddEditReminderLoader(reminderId = null, onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(
+            route = Screen.EditReminder.route,
+            arguments = listOf(navArgument("reminderId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val reminderId = backStackEntry.arguments?.getLong("reminderId")
+            AddEditReminderLoader(
+                reminderId = reminderId,
                 onNavigateBack = { navController.popBackStack() }
             )
         }
@@ -90,14 +136,6 @@ fun NavGraph(
                 viewModel = taskViewModel,
                 onNavigateBack = { navController.popBackStack() }
             )
-        }
-
-        composable(Screen.AddAlarm.route) {
-            AddEditAlarmScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.AddReminder.route) {
-            AddEditReminderScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable(Screen.ManageCategories.route) {

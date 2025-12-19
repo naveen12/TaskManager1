@@ -1,12 +1,7 @@
 package com.yourname.taskmanager.ui.screens
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -31,6 +26,8 @@ fun ScheduleifyScreen(
     reminderViewModel: ReminderViewModel = viewModel(),
     calendarViewModel: CalendarViewModel = viewModel(),
     onNavigateToEditTask: (Long) -> Unit,
+    onNavigateToEditAlarm: (Long) -> Unit,
+    onNavigateToEditReminder: (Long) -> Unit,
     onNavigateToAddItem: (String) -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
@@ -86,11 +83,11 @@ fun ScheduleifyScreen(
                 item {
                     Text(
                         text = "Tasks",
-                        style = androidx.compose.material3.MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.headlineMedium,
                         modifier = Modifier.padding(16.dp)
                     )
                 }
-                items((tasks + completedTasks).filter { it.dueDate?.toLocalDate() == selectedDate }) { task ->
+                items((tasks + completedTasks).filter { it.dueDate.toLocalDate() == selectedDate }) { task ->
                     TaskItem(
                         task = task,
                         onTaskClick = { onNavigateToEditTask(task.id) },
@@ -101,23 +98,30 @@ fun ScheduleifyScreen(
                 item {
                     Text(
                         text = "Alarms",
-                        style = androidx.compose.material3.MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.headlineMedium,
                         modifier = Modifier.padding(16.dp)
                     )
                 }
                 items(alarms.filter { it.time.toLocalDate() == selectedDate }) { alarm ->
-                    AlarmItem(alarm = alarm)
+                    AlarmItem(
+                        alarm = alarm,
+                        onAlarmEnabledChange = { isEnabled -> alarmViewModel.updateAlarm(alarm.copy(isEnabled = isEnabled)) },
+                        onAlarmClick = { onNavigateToEditAlarm(alarm.id) }
+                    )
                 }
 
                 item {
                     Text(
                         text = "Reminders",
-                        style = androidx.compose.material3.MaterialTheme. typography.headlineMedium,
+                        style = MaterialTheme.typography.headlineMedium,
                         modifier = Modifier.padding(16.dp)
                     )
                 }
                 items(reminders.filter { it.time.toLocalDate() == selectedDate }) { reminder ->
-                    ReminderItem(reminder = reminder)
+                    ReminderItem(
+                        reminder = reminder,
+                        onReminderClick = { onNavigateToEditReminder(reminder.id) }
+                    )
                 }
             }
         }

@@ -19,7 +19,6 @@ fun StatisticsScreen(
     onNavigateBack: () -> Unit
 ) {
     val stats by viewModel.taskStats.collectAsState()
-    val categories by viewModel.categories.collectAsState()
 
     Scaffold(
         topBar = {
@@ -73,22 +72,6 @@ fun StatisticsScreen(
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(top = 4.dp)
                         )
-                    }
-                }
-            }
-
-            // Categories
-            if (categories.isNotEmpty()) {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            "Categories",
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        categories.forEach { category ->
-                            Text("• $category", style = MaterialTheme.typography.bodyMedium)
-                        }
                     }
                 }
             }

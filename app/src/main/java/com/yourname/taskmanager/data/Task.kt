@@ -8,14 +8,14 @@ data class Task(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val title: String,
-    val description: String = "",
     val notes: String = "",
-    val dueDate: Long? = null,          // Timestamp in millis
-    val reminderTime: Long? = null,     // Timestamp for alarm
+    val dueDate: Long = System.currentTimeMillis(),
+    val duration: Long = 0,
+    val repeat: String = "Does not repeat",
+    val priority: Priority = Priority.LOW,
+    val backgroundColor: String = "#FFFFFF",
     val ringtone: String? = null,
     val isCompleted: Boolean = false,
-    val priority: Priority = Priority.LOW,
-    val category: String = "General",
     val createdAt: Long = System.currentTimeMillis(),
     val modifiedAt: Long = System.currentTimeMillis()
 )

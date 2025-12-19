@@ -17,10 +17,6 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE isCompleted = 1 ORDER BY modifiedAt DESC")
     fun getCompletedTasks(): Flow<List<Task>>
 
-    // Get tasks by category
-    @Query("SELECT * FROM tasks WHERE category = :category ORDER BY dueDate ASC")
-    fun getTasksByCategory(category: String): Flow<List<Task>>
-
     // Get task by ID
     @Query("SELECT * FROM tasks WHERE id = :taskId")
     suspend fun getTaskById(taskId: Long): Task?
@@ -28,10 +24,6 @@ interface TaskDao {
     // Search tasks
     @Query("SELECT * FROM tasks WHERE title LIKE '%' || :query || '%' OR notes LIKE '%' || :query || '%'")
     fun searchTasks(query: String): Flow<List<Task>>
-
-    // Get tasks with upcoming reminders
-    @Query("SELECT * FROM tasks WHERE reminderTime > :currentTime AND isCompleted = 0 ORDER BY reminderTime ASC")
-    fun getUpcomingReminders(currentTime: Long): Flow<List<Task>>
 
     // Insert task
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -48,8 +40,4 @@ interface TaskDao {
     // Delete all completed tasks
     @Query("DELETE FROM tasks WHERE isCompleted = 1")
     suspend fun deleteCompletedTasks()
-
-    // Get all categories
-    @Query("SELECT DISTINCT category FROM tasks ORDER BY category ASC")
-    fun getAllCategories(): Flow<List<String>>
 }

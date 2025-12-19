@@ -11,17 +11,41 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.yourname.taskmanager.MainActivity
 import com.yourname.taskmanager.R
+import com.yourname.taskmanager.TaskManagerApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class AlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        val type = intent.getStringExtra("EXTRA_TYPE") ?: return
-        val id = intent.getLongExtra("EXTRA_ID", -1L)
-        val title = intent.getStringExtra("EXTRA_TITLE") ?: ""
-        val description = intent.getStringExtra("EXTRA_DESCRIPTION") ?: ""
+        when (intent.action) {
+            Intent.ACTION_BOOT_COMPLETED -> {
+                val scope = CoroutineScope(Dispatchers.IO)
+                scope.launch {
+                    val app = context.applicationContext as TaskManagerApp
+                    val alarmScheduler = AlarmScheduler(context)
+                    app.alarmRepository.allAlarms.collect { alarms ->
+                        alarms.forEach { if (it.isEnabled) alarmScheduler.schedule(it) }
+                    }
+                    app.taskRepository.activeTasks.collect { tasks ->
+                        tasks.forEach { alarmScheduler.schedule(it) }
+                    }
+                    app.reminderRepository.allReminders.collect { reminders ->
+                        reminders.forEach { alarmScheduler.schedule(it) }
+                    }
+                }
+            }
+            else -> {
+                val type = intent.getStringExtra("EXTRA_TYPE") ?: return
+                val id = intent.getLongExtra("EXTRA_ID", -1L)
+                val title = intent.getStringExtra("EXTRA_TITLE") ?: ""
+                val description = intent.getStringExtra("EXTRA_DESCRIPTION") ?: ""
 
-        if (id != -1L) {
-            showNotification(context, type, id, title, description)
+                if (id != -1L) {
+                    showNotification(context, type, id, title, description)
+                }
+            }
         }
     }
 
@@ -80,7 +104,7 @@ class AlarmReceiver : BroadcastReceiver() {
         )
 
         val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_stat_name)
+            .setSmallIcon(R.drawable.ic_task_manager)
             .setContentTitle(title)
             .setContentText(description)
             .setPriority(NotificationCompat.PRIORITY_HIGH)

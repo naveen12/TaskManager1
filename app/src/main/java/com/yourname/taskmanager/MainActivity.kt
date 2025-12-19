@@ -1,10 +1,7 @@
 package com.yourname.taskmanager
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -12,15 +9,14 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import com.yourname.taskmanager.alarm.AlarmScheduler
@@ -28,8 +24,7 @@ import com.yourname.taskmanager.ui.navigation.BottomNavigationBar
 import com.yourname.taskmanager.ui.navigation.NavGraph
 import com.yourname.taskmanager.ui.theme.TaskManagerTheme
 import com.yourname.taskmanager.ui.viewmodel.*
-import com.yourname.taskmanager.utils.DatabaseHelper
-import com.yourname.taskmanager.utils.SettingsManager
+import com.yourname.taskmanager.utils.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
@@ -43,10 +38,15 @@ class MainActivity : ComponentActivity() {
         alarmScheduler = AlarmScheduler(this)
         settingsManager = SettingsManager(this)
 
-        // Request permissions
-        requestNeededPermissions()
-
         setContent {
+            RequestPermissions(context = this) {}
+            if (!hasExactAlarmPermission(this)) {
+                requestExactAlarmPermission(this)
+            }
+            if (!hasOverlayPermission(this)) {
+                requestOverlayPermission(this)
+            }
+
             val settingsViewModel: SettingsViewModel = viewModel()
             val isDarkTheme by settingsViewModel.isDarkTheme.collectAsState()
 
@@ -119,28 +119,5 @@ class MainActivity : ComponentActivity() {
         } else {
             Toast.makeText(this, "Failed to import database", Toast.LENGTH_SHORT).show()
         }
-    }
-
-    private fun requestNeededPermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), NOTIFICATION_PERMISSION_CODE)
-            }
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.SCHEDULE_EXACT_ALARM) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(arrayOf(Manifest.permission.SCHEDULE_EXACT_ALARM), ALARM_PERMISSION_CODE)
-            }
-        }
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        // Handle permission results if needed
-    }
-
-    companion object {
-        private const val NOTIFICATION_PERMISSION_CODE = 100
-        private const val ALARM_PERMISSION_CODE = 101
     }
 }

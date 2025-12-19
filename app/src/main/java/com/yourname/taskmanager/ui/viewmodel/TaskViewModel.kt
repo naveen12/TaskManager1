@@ -31,12 +31,6 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
         emptyList()
     )
 
-    val categories = taskRepository.categories.stateIn(
-        viewModelScope,
-        SharingStarted.WhileSubscribed(5000),
-        emptyList()
-    )
-
     // UI State
     private val _uiState = MutableStateFlow(TaskUiState())
     val uiState: StateFlow<TaskUiState> = _uiState.asStateFlow()
@@ -70,7 +64,7 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleTaskCompletion(task: Task) = viewModelScope.launch {
-        taskRepository.toggleTaskCompletion(task)
+        updateTask(task.copy(isCompleted = !task.isCompleted))
     }
 
     fun deleteCompletedTasks() = viewModelScope.launch {
@@ -90,17 +84,6 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
         _searchQuery.value = ""
     }
 
-    // Filter by category
-    fun filterByCategory(category: String) = viewModelScope.launch {
-        taskRepository.getTasksByCategory(category).collect { tasks ->
-            _uiState.update { it.copy(filteredTasks = tasks, selectedCategory = category) }
-        }
-    }
-
-    fun clearCategoryFilter() {
-        _uiState.update { it.copy(filteredTasks = null, selectedCategory = null) }
-    }
-
     // Statistics
     val taskStats = allTasks.map { tasks ->
         TaskStats(
@@ -109,9 +92,7 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
             active = tasks.count { !it.isCompleted },
             highPriority = tasks.count { it.priority == Priority.HIGH && !it.isCompleted },
             overdue = tasks.count {
-                it.dueDate != null &&
-                        it.dueDate!! < System.currentTimeMillis() &&
-                        !it.isCompleted
+                it.dueDate < System.currentTimeMillis() && !it.isCompleted
             }
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TaskStats())
